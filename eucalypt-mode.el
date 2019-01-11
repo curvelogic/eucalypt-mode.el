@@ -22,6 +22,7 @@
     (modify-syntax-entry ?:  "." table)
     (modify-syntax-entry ?,  "." table)
     (modify-syntax-entry ?_  "w" table)
+    (modify-syntax-entry ?•  "w" table)
     (modify-syntax-entry ?-  "w" table)
     (modify-syntax-entry ?!  "w" table)
     (modify-syntax-entry ??  "w" table)
@@ -163,6 +164,8 @@
   `(("`" . font-lock-preprocessor-face)
     ;; any operator and all prelude fns
     ("\\s_+" . font-lock-keyword-face)
+    ("_[[:digit:]]*" . font-lock-type-face)
+    ("•[[:digit:]]*" . font-lock-type-face)
     ("__\\sw+" . font-lock-builtin-face)
     ;; symbols
     (":\\sw+" . font-lock-constant-face)

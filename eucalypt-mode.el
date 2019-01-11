@@ -161,16 +161,28 @@
 		"dict") 'symbols))
 
 (defvar eucalypt-font-lock-keywords
-  `(("`" . font-lock-preprocessor-face)
-    ;; any operator and all prelude fns
+  `(;; declaration metadata lead-in
+    ("`" . font-lock-preprocessor-face)
+    ;; binary op declaration
+    ("([[:space:]]*\\sw+[[:space:]]*\\(\\s_+\\)[[:space:]]*\\sw+[[:space:]]*)[[:space:]]*:[[:space:]]" 1 font-lock-function-name-face)
+    ;; unary prefix op declaration
+    ("([[:space:]]*\\(\\s_+\\)[[:space:]]*\\sw+[[:space:]]*)[[:space:]]*:[[:space:]]" 1 font-lock-function-name-face)
+    ;; unary postfix op declaration
+    ("([[:space:]]*\\sw+[[:space:]]*\\(\\s_+\\)[[:space:]]*)[[:space:]]*:[[:space:]]" 1 font-lock-function-name-face)
+    ;; function declaration
+    ("\\(\\sw+\\)[[:space:]]*(.+)[[:space:]]*:[[:space:]]" 1 font-lock-function-name-face)
+    ;; property declaration
+    ("\\(\\sw+\\)[[:space:]]*:[[:space:]]" 1 font-lock-variable-name-face)
+    ;; operators
     ("\\s_+" . font-lock-keyword-face)
-    ("_[[:digit:]]*" . font-lock-type-face)
-    ("•[[:digit:]]*" . font-lock-type-face)
+    ;; intrinsics
     ("__\\sw+" . font-lock-builtin-face)
     ;; symbols
     (":\\sw+" . font-lock-constant-face)
-    ("\\(\\sw+\\)[[:space:]]*(.+)[[:space:]]*:[[:space:]]" 1 font-lock-function-name-face)
-    ("\\(\\sw+\\)[[:space:]]*:[[:space:]]" 1 font-lock-variable-name-face)
+    ;; expression anaphora
+    ("\\_<_[[:digit:]]*\\_>" . font-lock-type-face)
+    ;; block anaphora
+    ("\\_<•[[:digit:]]*\\_>" . font-lock-type-face)
     (,prelude-names 1 font-lock-keyword-face))
   "Keywords patterns to highlight in Eucalypt mode")
 

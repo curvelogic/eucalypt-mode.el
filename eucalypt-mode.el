@@ -4,11 +4,29 @@
 ;;
 ;; Copyright © 2019 Greg Hawkins
 
+(defgroup eucalypt nil
+  "Major mode for editing Eucalypt native syntax files."
+  :prefix "eucalypt-"
+  :group 'languages
+  :link '(url-link :tag "GitHub" "https://github.com/curvelogic/eucalypt-mode.el"))
+
+(defcustom eucalypt-eu-command
+  "eu"
+  "The command used to execute eucalypt command line program."
+  :type 'string
+  :group 'eucalypt)
+
+(defcustom eucalypt-eu-global-opts
+  ""
+  "Default options to pass to `eu'"
+  :type 'string
+  :group 'eucalypt)
+
 (defvar eucalypt-mode-hook nil)
 
 (defvar eucalypt-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\C-j" 'newline-and-indent)
+    (define-key map "\C-c\C-k" 'eucalypt-render-buffer)
     map)
   "Keymap for Eucalypt major mode")
 
@@ -34,7 +52,7 @@
     table)
   "Syntax table in use in Windows style `conf-mode' buffers.")
 
-(defvar prelude-names
+(defvar eucalypt--prelude-names
   (regexp-opt '("str"
 		"eu"
 		"io"
@@ -183,7 +201,7 @@
     ("\\_<_[[:digit:]]*\\_>" . font-lock-type-face)
     ;; block anaphora
     ("\\_<•[[:digit:]]*\\_>" . font-lock-type-face)
-    (,prelude-names 1 font-lock-keyword-face))
+    (,eucalypt--prelude-names 1 font-lock-keyword-face))
   "Keywords patterns to highlight in Eucalypt mode")
 
 ;;;###autoload
@@ -201,5 +219,45 @@
   (setq major-mode 'eucalypt-mode)
   (setq mode-name "Eucalypt")
   (run-hooks 'eucalypt-mode-hook))
+
+(defconst eucalypt--command-output-buffer
+  "* Eucalypt Command Output *"
+  "Name of buffer to use for `eu' command output")
+
+(defconst eucalypt--command-error-buffer
+  "* Eucalypt Command Error *"
+  "Name of buffer to use for `eu' command error output")
+
+(defun eucalypt--form-command (opts)
+  "Formulate a command line call to `eu' with the specified string options"
+  (let* ((exe (executable-find eucalypt-eu-command)))
+    (format "%s %s %s" exe eucalypt-eu-global-opts opts)))
+
+(defun eucalypt--process-region (min max)
+  "Process region with `eu' and display in special buffer"
+  (shell-command-on-region min
+			   max
+			   command
+			   eucalypt--command-output-buffer
+			   nil
+			   eucalypt--command-error-buffer
+			   t)
+  (if (commandp 'yaml-mode)
+      (with-current-buffer (get-buffer eucalypt--command-output-buffer)
+	(funcall 'yaml-mode))))
+
+(defun eucalypt-render-region (prefix)
+  "Process the region by passing contents as stdin to `eu'"
+  (interactive "P")
+  (let* ((cmd (eucalypt--form-command "eu@-"))
+	 (command (if prefix (read-from-minibuffer "Command: " cmd) cmd)))
+    (eucalypt--process-region (region-beginning) (region-end))))
+
+(defun eucalypt-render-buffer (prefix)
+  "Process the entire buffer by passing contents as stdin to `eu'"
+  (interactive "P")
+  (let* ((cmd (eucalypt--form-command "eu@-"))
+	 (command (if prefix (read-from-minibuffer "Command: " cmd) cmd)))
+    (eucalypt--process-region (point-min) (point-max))))
 
 (provide 'eucalypt-mode)

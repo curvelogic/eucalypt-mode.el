@@ -207,18 +207,13 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.eu\\'" . eucalypt-mode))
 
-(defun eucalypt-mode ()
-  "Major mode for editing Eucalypt syntax files"
-  (interactive)
-  (kill-all-local-variables)
-  (set-syntax-table eucalypt-mode-syntax-table)
-  (use-local-map eucalypt-mode-map)
+(define-derived-mode eucalypt-mode prog-mode "Eucalypt"
+  "Major mode for editing Eucalypt syntax files.
+
+\\{eucalypt-mode-map}"
   (setq font-lock-defaults '(eucalypt-font-lock-keywords nil))
   (setq comment-start "# ")
-  (setq comment-end "")
-  (setq major-mode 'eucalypt-mode)
-  (setq mode-name "Eucalypt")
-  (run-hooks 'eucalypt-mode-hook))
+  (setq comment-end ""))
 
 (defconst eucalypt--command-output-buffer
   "* Eucalypt Command Output *"

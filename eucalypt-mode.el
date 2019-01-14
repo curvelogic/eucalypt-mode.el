@@ -206,6 +206,8 @@
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.eu\\'" . eucalypt-mode))
+(add-to-list 'auto-mode-alist '("\\.eucalypt\\'" . eucalypt-mode))
+(add-to-list 'auto-mode-alist '("Eufile\\'" . eucalypt-mode))
 
 (define-derived-mode eucalypt-mode prog-mode "Eucalypt"
   "Major mode for editing Eucalypt syntax files.
@@ -245,14 +247,14 @@
   "Process the region by passing contents as stdin to `eu'"
   (interactive "P")
   (let* ((cmd (eucalypt--form-command "eu@-"))
-	 (command (if prefix (read-from-minibuffer "Command: " cmd) cmd)))
+	 (command (if prefix (read-shell-command "Command: " cmd) cmd)))
     (eucalypt--process-region (region-beginning) (region-end))))
 
 (defun eucalypt-render-buffer (prefix)
   "Process the entire buffer by passing contents as stdin to `eu'"
   (interactive "P")
   (let* ((cmd (eucalypt--form-command "eu@-"))
-	 (command (if prefix (read-from-minibuffer "Command: " cmd) cmd)))
+	 (command (if prefix (read-shell-command "Command: " cmd) cmd)))
     (eucalypt--process-region (point-min) (point-max))))
 
 (provide 'eucalypt-mode)

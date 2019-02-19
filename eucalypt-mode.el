@@ -50,133 +50,31 @@
     (modify-syntax-entry ?\n ">" table)
     (modify-syntax-entry ?\r ">" table)
     table)
-  "Syntax table in use in Windows style `conf-mode' buffers.")
+  "Syntax table to use in eucalypt mode buffers.")
 
-(defvar eucalypt--prelude-names
-  (regexp-opt '("str"
-		"eu"
-		"io"
-		"panic"
-		"assert"
-		"null"
-		"true"
-		"false"
-		"cat"
-		"if"
-		"then"
-		"cons"
-		"head"
-		"head-or"
-		"tail"
-		"nil"
-		"first"
-		"second"
-		"sym"
-		"merge"
-		"deep-merge"
-		"elements"
-		"block"
-		"has"
-		"lookup"
-		"lookup-in"
-		"lookup-or"
-		"lookup-or-in"
-		"lookup-alts"
-		"not"
-		"and"
-		"or"
-		"inc"
-		"dec"
-		"zero?"
-		"pos?"
-		"neg?"
-		"num"
-		"floor"
-		"ceiling"
-		"max"
-		"max-of"
-		"min"
-		"min-of"
-		"ch"
-		"identity"
-		"const"
-		"compose"
-		"apply"
-		"flip"
-		"complement"
-		"curry"
-		"uncurry"
-		"cond"
-		"juxt"
-		"with-meta"
-		"assertions"
-		"nil?"
-		"take"
-		"drop"
-		"take-while"
-		"take-until"
-		"drop-while"
-		"drop-until"
-		"nth"
-		"repeat"
-		"foldl"
-		"foldr"
-		"scanl"
-		"scanr"
-		"iterate"
-		"count"
-		"last"
-		"cycle"
-		"map"
-		"map2"
-		"zip-with"
-		"zip"
-		"filter"
-		"remove"
-		"append"
-		"prepend"
-		"concat"
-		"zip-apply"
-		"reverse"
-		"all-true?"
-		"all"
-		"any-true?"
-		"any"
-		"window"
-		"partition"
-		"over-sliding-pairs"
-		"differences"
-		"merge-all"
-		"key"
-		"value"
-		"keys"
-		"values"
-		"bimap"
-		"map-first"
-		"map-second"
-		"map-kv"
-		"pair"
-		"zip-kv"
-		"with-keys"
-		"map-values"
-		"map-keys"
-		"filter-items"
-		"by-key"
-		"by-key-name"
-		"by-key-match"
-		"by-value"
-		"match-filter-values"
-		"filter-values"
-		"alter-value"
-		"update-value"
-		"alter"
-		"update"
-		"update-value-of"
-		"set-value"
-		"tongue"
-		"merge-at"
-		"set"
-		"dict") 'symbols))
+;; generate with:
+;; eu prelude=resource:prelude -x text -e 'prelude keys map(str.of) filter(str.matches?("[\w-?]+")) map("{ch.dq}{}{ch.dq}")'
+(defvar eucalypt--prelude-names (regexp-opt '("eu" "io" "panic"
+  "assert" "null" "true" "false" "cat" "if" "then" "when" "cons"
+  "head" "nil?" "head-or" "tail" "tail-or" "nil" "first" "second"
+  "second-or" "sym" "merge" "deep-merge" "elements" "block" "has"
+  "lookup" "lookup-in" "lookup-or" "lookup-or-in" "lookup-alts" "not"
+  "and" "or" "-" "inc" "dec" "negate" "zero?" "pos?" "neg?" "num"
+  "floor" "ceiling" "max" "max-of" "min" "min-of" "ch" "str"
+  "identity" "const" "->" "compose" "apply" "flip" "complement"
+  "curry" "uncurry" "cond" "juxt" "with-meta" "meta" "assertions"
+  "//=?" "//!?" "take" "drop" "take-while" "take-until" "drop-while"
+  "drop-until" "nth" "repeat" "foldl" "foldr" "scanl" "scanr"
+  "iterate" "ints-from" "range" "count" "last" "cycle" "map" "map2"
+  "zip-with" "zip" "filter" "remove" "append" "prepend" "concat"
+  "mapcat" "zip-apply" "reverse" "all-true?" "all" "any-true?" "any"
+  "window" "partition" "over-sliding-pairs" "differences" "merge-all"
+  "key" "value" "keys" "values" "bimap" "map-first" "map-second"
+  "map-kv" "map-as-block" "pair" "zip-kv" "with-keys" "map-values"
+  "map-keys" "filter-items" "by-key" "by-key-name" "by-key-match"
+  "by-value" "match-filter-values" "filter-values" "_block"
+  "alter-value" "update-value" "alter" "update" "update-value-or"
+  "set-value" "tongue" "merge-at" "cal" "iosm") 'symbols))
 
 (defvar eucalypt-font-lock-keywords
   `(;; declaration metadata lead-in
@@ -215,7 +113,9 @@
 \\{eucalypt-mode-map}"
   (setq font-lock-defaults '(eucalypt-font-lock-keywords nil))
   (setq comment-start "# ")
-  (setq comment-end ""))
+  (setq comment-end "")
+  (setq indent-tabs-mode nil)
+  (setq tab-width 2))
 
 (defconst eucalypt--command-output-buffer
   "* Eucalypt Command Output *"
@@ -230,31 +130,59 @@
   (let* ((exe (executable-find eucalypt-eu-command)))
     (format "%s %s %s" exe eucalypt-eu-global-opts opts)))
 
-(defun eucalypt--process-region (min max)
+(defun eucalypt--process-region (min max command)
   "Process region with `eu' and display in special buffer"
-  (shell-command-on-region min
-			   max
-			   command
-			   eucalypt--command-output-buffer
-			   nil
-			   eucalypt--command-error-buffer
-			   t)
-  (if (commandp 'yaml-mode)
+  (let* ((output-format (eucalypt--infer-output-format command))
+	 (output-mode (eucalypt--select-output-mode output-format)))
+    (progn
+      (shell-command-on-region min max command
+			       eucalypt--command-output-buffer
+			       nil
+			       eucalypt--command-error-buffer
+			       t)
       (with-current-buffer (get-buffer eucalypt--command-output-buffer)
-	(funcall 'yaml-mode))))
+	(funcall output-mode)))))
 
 (defun eucalypt-render-region (prefix)
   "Process the region by passing contents as stdin to `eu'"
   (interactive "P")
-  (let* ((cmd (eucalypt--form-command "eu@-"))
+  (let* ((format (eucalypt-buffer-input-format))
+	 (cmd (eucalypt--form-command (concat format "@-")))
 	 (command (if prefix (read-shell-command "Command: " cmd) cmd)))
-    (eucalypt--process-region (region-beginning) (region-end))))
+    (eucalypt--process-region (region-beginning) (region-end) command)))
 
 (defun eucalypt-render-buffer (prefix)
   "Process the entire buffer by passing contents as stdin to `eu'"
   (interactive "P")
-  (let* ((cmd (eucalypt--form-command "eu@-"))
+  (let* ((format (eucalypt-buffer-input-format))
+	 (cmd (eucalypt--form-command (concat format "@-")))
 	 (command (if prefix (read-shell-command "Command: " cmd) cmd)))
-    (eucalypt--process-region (point-min) (point-max))))
+    (eucalypt--process-region (point-min) (point-max) command)))
+
+(defun eucalypt--infer-output-format (command)
+  (cond
+   ((string-match "-j" command) 'json)
+   ((string-match "-x[[:space:]]+\\(\\w+\\)" command) (intern (match-string 1 command)))
+   (t 'yaml)))
+
+(defun eucalypt--select-output-mode (format)
+  (cond
+   ((and (eq format 'yaml) (commandp 'yaml-mode)) 'yaml-mode)
+   ((and (eq format 'json) (commandp 'json-mode)) 'json-mode)
+   ((and (eq format 'json) (commandp 'js2-mode)) 'js2-mode)
+   ((and (eq format 'json) (commandp 'js2-mode)) 'js-mode)
+   (t 'text-mode)))
+
+(defun eucalypt-buffer-input-format ()
+  "Determine the appropriate input format to use for the current buffer"
+  (eucalypt--extension-to-format (file-name-extension buffer-file-name)))
+
+(defun eucalypt--extension-to-format (extension)
+  "Infer an input format from the specified extension."
+  (cond
+   ((string= extension "yaml") "yaml")
+   ((string= extension "csv") "csv")
+   ((string= extension "txt") "txt")
+   (t "eu")))
 
 (provide 'eucalypt-mode)
